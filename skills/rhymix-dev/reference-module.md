@@ -2,9 +2,14 @@
 
 ## Directory Structure (Modern Namespace-based)
 
+IMPORTANT: `info.xml` and `module.xml` MUST be inside the `conf/` subdirectory, NEVER in the module root.
+
 ```
 modules/{module_name}/
   composer.json                        # Autoloader config - REQUIRED
+  conf/                                # Config directory - REQUIRED
+    info.xml                           # Module metadata - REQUIRED (MUST be in conf/)
+    module.xml                         # Action/grant/trigger definitions - REQUIRED (MUST be in conf/)
   controllers/
     Base.php                           # Base class (extends \ModuleObject) - REQUIRED
     Install.php                        # Install/update callbacks - REQUIRED
@@ -15,9 +20,6 @@ modules/{module_name}/
   models/
     Config.php                         # Module configuration model
     {ModelName}.php                    # Other models
-  conf/
-    info.xml                           # Module metadata - REQUIRED
-    module.xml                         # Action/grant/trigger definitions - REQUIRED
   lang/
     ko.php                             # Korean language
     en.php                             # English language

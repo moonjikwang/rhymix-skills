@@ -162,21 +162,72 @@ throw new \Rhymix\Framework\Exceptions\TargetNotFound;
 
 ## Language Files (lang/{lang_code}.php)
 
+IMPORTANT: Each key MUST be a separate `$lang->key = 'value'` assignment. NEVER use arrays.
+
+**CORRECT format:**
 ```php
 <?php
-$lang->board = '게시판';
-$lang->cmd_write = '글쓰기';
-$lang->msg_success = '성공적으로 처리되었습니다.';
+$lang->cmd_mymodule = 'My Module';
+$lang->cmd_mymodule_general_config = 'General Settings';
+$lang->cmd_mymodule_example_config = 'Example Config';
+$lang->msg_mymodule_success = 'Successfully saved.';
+$lang->msg_mymodule_not_found = 'Entry not found.';
+$lang->about_mymodule = 'This is a description of my module.';
 ```
+
+**WRONG format (DOES NOT WORK):**
+```php
+<?php
+// NEVER do this — Rhymix does not support array-style lang definitions
+$lang->mymodule = [
+    'title' => 'My Module',
+    'config' => 'Settings',
+];
+```
+
+### Naming Conventions for Language Keys
+- `cmd_` prefix: commands/labels (e.g., `cmd_write`, `cmd_delete`)
+- `msg_` prefix: messages (e.g., `msg_success`, `msg_not_found`)
+- `about_` prefix: descriptions/help text
+- Module-specific keys should include module name: `cmd_mymodule_config`
 
 ### Access Methods
 
-- Template: `{$lang->board}` or `@lang('board')`
-- PHP: `lang('board')` or `\Context::getLang('board')`
+- Template v2: `{{ $lang->cmd_mymodule }}` or `@lang('cmd_mymodule')`
+- Template v1: `{$lang->cmd_mymodule}`
+- PHP: `lang('cmd_mymodule')` or `\Context::getLang('cmd_mymodule')`
 
 ### Supported Language Codes
 
 `ko`, `en`, `ja`, `zh-CN`, `zh-TW`, `vi`, `es`, `ru`, `fr`, `tr`
+
+## Commonly Misused APIs (DO NOT USE)
+
+These methods DO NOT EXIST and will cause fatal errors:
+
+| Wrong (Does NOT Exist) | Correct Alternative |
+|------------------------|---------------------|
+| `ModuleHandler::getSkins()` | `ModuleModel::getSkins($module_path)` |
+| `ModuleHandler::getModuleConfig()` | `ModuleModel::getModuleConfig($module_name)` |
+| `ModuleHandler::insertModuleConfig()` | `ModuleController::getInstance()->insertModuleConfig()` |
+
+### Correct Static vs Instance Patterns
+
+```php
+// ModuleModel — static methods
+ModuleModel::getModuleConfig('module_name')
+ModuleModel::getSkins($module_path)
+ModuleModel::getModuleInfoByMid($mid)
+
+// ModuleController — instance methods
+$oModuleController = ModuleController::getInstance();
+$oModuleController->insertModuleConfig('module_name', $config);
+
+// NEVER do this:
+ModuleController::insertModuleConfig(...)  // WRONG — not a static method
+```
+
+When unsure if a method exists or how to call it, use only the APIs documented in this reference. Do NOT guess or invent method signatures.
 
 ## Commit Message Conventions
 

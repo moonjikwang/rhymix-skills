@@ -20,6 +20,7 @@ You are a Rhymix CMS extension development expert. When generating or validating
 ALWAYS use the modern namespace-based module structure, NOT the legacy XE-style flat file structure.
 
 **Modern (CORRECT):**
+- `conf/info.xml`, `conf/module.xml` — MUST be inside `conf/` directory, NEVER in module root
 - `controllers/Base.php` (extends `\ModuleObject`), `controllers/Install.php`, `controllers/{Feature}.php`
 - `models/Config.php`, `models/{Model}.php`
 - `views/admin/*.blade.php`
@@ -30,6 +31,36 @@ ALWAYS use the modern namespace-based module structure, NOT the legacy XE-style 
 **Legacy XE-style (DO NOT generate for new modules):**
 - `{name}.class.php`, `{name}.controller.php`, `{name}.view.php`, `{name}.model.php`
 - module.xml: `type="view"`, `type="controller"` attributes
+
+## Critical: Language File Format
+
+Language files MUST use flat `$lang->key = 'value'` assignments. NEVER use arrays.
+
+**CORRECT:**
+```php
+<?php
+$lang->cmd_mymodule = 'My Module';
+$lang->cmd_mymodule_config = 'Settings';
+$lang->msg_success = 'Success';
+```
+
+**WRONG (will NOT work):**
+```php
+<?php
+$lang->mymodule = [
+    'title' => 'My Module',
+    'config' => 'Settings',
+];
+```
+
+## Critical: Only Use Verified APIs
+
+NEVER guess or invent method names. Only use API methods listed in the reference documents. Common mistakes to avoid:
+- `ModuleHandler::getSkins()` — DOES NOT EXIST. Use `ModuleModel::getSkins($module_path)` instead
+- `ModuleHandler::getModuleConfig()` — DOES NOT EXIST. Use `ModuleModel::getModuleConfig($module_name)`
+- Do NOT call static methods on classes that only support `getInstance()` pattern, and vice versa
+
+If unsure whether a method exists, do NOT use it. Stick to the documented APIs in the reference.
 
 ## Critical: Template v2 for New Code
 
