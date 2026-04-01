@@ -1,33 +1,66 @@
 # Rhymix Module Development Reference
 
-## Directory Structure
+## Directory Structure (Modern Namespace-based)
 
 ```
 modules/{module_name}/
-  {module_name}.class.php              # Main class (extends ModuleObject) - REQUIRED
-  {module_name}.controller.php         # Controller (proc* actions)
-  {module_name}.model.php              # Model (get* actions)
-  {module_name}.view.php               # View (disp* actions)
-  {module_name}.admin.controller.php   # Admin controller
-  {module_name}.admin.model.php        # Admin model
-  {module_name}.admin.view.php         # Admin view
-  {module_name}.mobile.php             # Mobile view (extends View class)
-  {module_name}.api.php                # API class
+  composer.json                        # Autoloader config - REQUIRED
+  controllers/
+    Base.php                           # Base class (extends \ModuleObject) - REQUIRED
+    Install.php                        # Install/update callbacks - REQUIRED
+    Index.php                          # Default frontend controller
+    Admin.php                          # Admin controller
+    EventHandlers.php                  # Trigger handlers
+    {Feature}.php                      # Feature-grouped controllers (e.g., Read.php, Write.php)
+  models/
+    Config.php                         # Module configuration model
+    {ModelName}.php                    # Other models
   conf/
     info.xml                           # Module metadata - REQUIRED
     module.xml                         # Action/grant/trigger definitions - REQUIRED
   lang/
-    ko.php                             # Korean
-    en.php                             # English
+    ko.php                             # Korean language
+    en.php                             # English language
   schemas/                             # DB table definitions (XML)
   queries/                             # DB query definitions (XML)
   ruleset/                             # Form validation rules (XML)
   skins/                               # Frontend skins
-    {skin_name}/
+    default/
       skin.xml                         # Skin metadata and extra_vars
-      *.html                           # Templates
-  m.skins/                             # Mobile skins
-  tpl/                                 # Admin templates
+      index.html                       # Templates (.html or .blade.php)
+      css/skin.scss
+      js/skin.js
+  m.skins/                             # Mobile skins (same structure as skins/)
+    default/
+      skin.xml
+      index.html
+      css/skin.scss
+      js/skin.js
+  views/                               # Admin view templates
+    admin/
+      config.blade.php                 # Admin templates (use v2 / .blade.php)
+      config.scss
+      config.js
+  .editorconfig                        # Editor config
+  .gitignore
+  LICENSE
+  README.md
+```
+
+## composer.json
+
+Every modern Rhymix module requires this for PSR-4 autoloading:
+
+```json
+{
+  "config": {
+    "optimize-autoloader": true,
+    "prepend-autoloader": false
+  },
+  "require": {
+    "rhymix/composer-stub": "dev-master"
+  }
+}
 ```
 
 ## conf/info.xml
@@ -35,106 +68,98 @@ modules/{module_name}/
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <module version="0.2">
-    <title xml:lang="ko">모듈 이름</title>
-    <title xml:lang="en">Module Name</title>
-    <description xml:lang="ko">모듈 설명</description>
-    <description xml:lang="en">Module description</description>
+    <title xml:lang="ko">Module Name</title>
+    <description xml:lang="ko">Module description</description>
     <version>1.0.0</version>
     <date>2024-01-01</date>
     <category>service</category>
-    <author email_address="dev@example.com" link="https://example.com/">
+    <author email_address="dev@example.com" link="https://example.com">
         <name xml:lang="ko">Author Name</name>
-        <name xml:lang="en">Author Name</name>
     </author>
 </module>
 ```
 
-## conf/module.xml
+## conf/module.xml (Modern Format)
+
+The modern format uses `class` attribute pointing to namespaced controller classes instead of the old `type` attribute.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <module>
-    <!-- Permission grants -->
     <grants>
         <grant name="list" default="guest">
-            <title xml:lang="ko">목록</title>
+            <title xml:lang="ko">List</title>
             <title xml:lang="en">List</title>
         </grant>
         <grant name="write" default="member">
-            <title xml:lang="ko">작성</title>
+            <title xml:lang="ko">Write</title>
             <title xml:lang="en">Write</title>
         </grant>
     </grants>
 
-    <!-- Action definitions -->
     <actions>
-        <!-- View actions: disp{ModuleName}{Action} -->
-        <action name="dispMyModuleList" type="view" permission="list"
-                standalone="false" index="true">
-            <route route="page/$page:int" priority="10" />
-        </action>
-
-        <action name="dispMyModuleWrite" type="view" permission="write"
-                standalone="false" meta-noindex="true">
-            <route route="write" />
-            <route route="$item_srl/edit" />
-        </action>
-
-        <!-- Controller actions: proc{ModuleName}{Action} -->
-        <action name="procMyModuleInsert" type="controller"
-                permission="write" standalone="false"
-                ruleset="insertItem" />
-
         <!-- Admin actions -->
-        <action name="dispMyModuleAdminList" type="view"
-                admin_index="true" menu_name="mymodule" menu_index="true" />
+        <action name="dispMyModuleAdminConfig" class="Controllers\Admin"
+                menu-name="mymodule" admin-index="true" />
+        <action name="procMyModuleAdminInsertConfig" class="Controllers\Admin" />
 
-        <action name="dispMyModuleAdminConfig" type="view"
-                setup_index="true" menu_name="mymodule" />
+        <!-- Frontend view actions (index="true" = default action) -->
+        <action name="dispMyModuleIndex" class="Controllers\Index" index="true" />
 
-        <!-- Mobile actions -->
-        <action name="dispMyModuleList" type="mobile"
-                permission="list" standalone="false" />
+        <!-- Read action with route -->
+        <action name="dispMyModuleRead" class="Controllers\Read"
+                route="read/$item_srl" />
 
-        <!-- 404 error handler -->
-        <action name="dispMyModuleNotFound" type="view"
-                standalone="false" error-handlers="404" />
+        <!-- Write actions with multiple routes -->
+        <action name="dispMyModuleWrite" class="Controllers\Write">
+            <route route="write" />
+            <route route="edit/$item_srl" />
+        </action>
+
+        <!-- Controller (POST) action with permission -->
+        <action name="procMyModuleWrite" class="Controllers\Write"
+                permission="write" />
     </actions>
 
     <!-- Event handlers (triggers) -->
     <eventHandlers>
         <eventHandler after="document.insertDocument"
-                      class="controller" method="triggerAfterInsertDocument" />
-        <eventHandler before="module.dispAdditionSetup"
-                      class="model" method="triggerDispAdditionSetup" />
+                      class="Controllers\EventHandlers" method="afterInsertDocument" />
+        <eventHandler after="document.updateDocument"
+                      class="Controllers\EventHandlers" method="afterUpdateDocument" />
+        <eventHandler after="document.deleteDocument"
+                      class="Controllers\EventHandlers" method="afterDeleteDocument" />
     </eventHandlers>
 
     <!-- Admin menus -->
     <menus>
         <menu name="mymodule" type="all">
-            <title xml:lang="ko">내 모듈</title>
+            <title xml:lang="ko">My Module</title>
             <title xml:lang="en">My Module</title>
         </menu>
     </menus>
 </module>
 ```
 
+### Key Differences from Legacy (XE-style) module.xml
+
+| Aspect | Legacy (XE) | Modern (Rhymix) |
+|--------|-------------|-----------------|
+| Action routing | `type="view"`, `type="controller"` | `class="Controllers\ClassName"` |
+| eventHandler class | `class="controller"` | `class="Controllers\EventHandlers"` |
+| Menu attribute | `menu_name` | `menu-name` |
+| Admin index | `admin_index="true"` | `admin-index="true"` |
+
 ### Action Attribute Reference
 
 | Attribute | Description |
 |-----------|-------------|
-| `type` | `view`, `controller`, `model`, `mobile`, `api` |
+| `class` | Namespaced controller class (e.g., `Controllers\Admin`) |
 | `permission` | `guest`, `member`, `manager`, `root`, or grant name |
-| `standalone` | `true`/`false` — whether action works without a module instance |
 | `index="true"` | Default frontend action |
-| `admin_index="true"` | Default admin action |
-| `setup_index="true"` | Module setup entry point |
-| `menu_name` | Associates action with an admin menu |
-| `menu_index="true"` | Default action for that admin menu |
-| `ruleset` | XML filename in `ruleset/` directory (without .xml) |
-| `check_csrf` | `"false"` to disable CSRF check |
-| `method` | Allowed HTTP methods (e.g., `"GET\|POST"`) |
-| `meta-noindex` | `"true"` to add noindex meta tag |
+| `admin-index="true"` | Default admin action |
+| `menu-name` | Associates action with an admin menu |
+| `route` | Short URL route pattern (inline attribute or child elements) |
 | `error-handlers` | e.g., `"404"` |
 | `global-route` | `"true"` for mid-less routing |
 
@@ -153,28 +178,48 @@ modules/{module_name}/
 
 Note: Variables ending in `_srl` default to `int` type.
 
-### eventHandler Attributes
+Multiple routes per action use child `<route>` elements. Priority attribute resolves conflicts.
 
-- `before` or `after`: trigger point as `module_name.trigger_name`
-- `class`: handler class type (`controller`, `model`, `view`)
-- `method`: method name to call
+## Class Structure (Namespace-based)
 
-## Class Structure
+Namespace pattern: `Rhymix\Modules\{ModuleName}\Controllers` and `Rhymix\Modules\{ModuleName}\Models`
 
-### Main Class ({module_name}.class.php)
+### Base Class (controllers/Base.php)
 
 ```php
 <?php
 
-class MyModule extends ModuleObject
+namespace Rhymix\Modules\MyModule\Controllers;
+
+/**
+ * MyModule base controller.
+ */
+class Base extends \ModuleObject
+{
+
+}
+```
+
+### Install Class (controllers/Install.php)
+
+```php
+<?php
+
+namespace Rhymix\Modules\MyModule\Controllers;
+
+/**
+ * MyModule install/update handler.
+ */
+class Install extends Base
 {
     /**
-     * Install the module.
+     * Module install callback.
      *
-     * @return BaseObject|void
+     * @return object
      */
-    function moduleInstall()
+    public function moduleInstall()
     {
+
     }
 
     /**
@@ -182,91 +227,97 @@ class MyModule extends ModuleObject
      *
      * @return bool
      */
-    function checkUpdate()
+    public function checkUpdate()
     {
-        return false;
+
     }
 
     /**
-     * Update the module.
+     * Module update callback.
      *
-     * @return BaseObject|void
+     * @return object
      */
-    function moduleUpdate()
+    public function moduleUpdate()
     {
+
     }
 
     /**
-     * Uninstall the module.
+     * Cache recompile callback.
      *
-     * @return BaseObject|void
+     * @return void
      */
-    function moduleUninstall()
+    public function recompileCache()
     {
+
     }
 }
 ```
 
-### View Class ({module_name}.view.php)
+### Frontend Controller (controllers/Index.php)
 
 ```php
 <?php
 
-class MyModuleView extends MyModule
+namespace Rhymix\Modules\MyModule\Controllers;
+
+/**
+ * MyModule default frontend controller.
+ */
+class Index extends Base
 {
     /**
-     * Initialize the view.
-     *
-     * @return void
+     * Initialize.
      */
     public function init()
     {
-        $this->setTemplatePath(
-            sprintf('%sskins/%s/', $this->module_path, $this->module_info->skin)
-        );
+        $this->setTemplatePath($this->module_path . 'skins/' . ($this->module_info->skin ?: 'default'));
     }
 
     /**
-     * Display item list.
-     *
-     * @return BaseObject|void
+     * Display main page.
      */
-    public function dispMyModuleList()
+    public function dispMyModuleIndex()
     {
-        $args = new stdClass;
-        $args->module_srl = $this->module_srl;
-        $args->page = \Context::get('page');
-        $output = executeQueryArray('mymodule.getItemList', $args);
-
-        \Context::set('item_list', $output->data);
-        \Context::set('page_navigation', $output->page_navigation);
-        $this->setTemplateFile('list');
+        $this->setTemplateFile('index');
     }
 }
 ```
 
-### Controller Class ({module_name}.controller.php)
+### Feature Controller (controllers/Write.php)
+
+In the modern structure, related view (disp) and controller (proc) actions can be grouped in the same class file:
 
 ```php
 <?php
 
-class MyModuleController extends MyModule
+namespace Rhymix\Modules\MyModule\Controllers;
+
+/**
+ * MyModule write controller.
+ */
+class Write extends Base
 {
     /**
-     * Initialize the controller.
-     *
-     * @return void
+     * Initialize.
      */
     public function init()
     {
+        $this->setTemplatePath($this->module_path . 'skins/' . ($this->module_info->skin ?: 'default'));
     }
 
     /**
-     * Insert an item.
-     *
-     * @return BaseObject|void
+     * Display write form.
      */
-    public function procMyModuleInsert()
+    public function dispMyModuleWrite()
+    {
+        $this->setTemplateFile('write');
+    }
+
+    /**
+     * Process write action.
+     */
+    public function procMyModuleWrite()
     {
         if (!$this->grant->write)
         {
@@ -289,79 +340,175 @@ class MyModuleController extends MyModule
 }
 ```
 
-### Model Class ({module_name}.model.php)
+### Admin Controller (controllers/Admin.php)
 
 ```php
 <?php
 
-class MyModuleModel extends MyModule
+namespace Rhymix\Modules\MyModule\Controllers;
+
+use Rhymix\Modules\MyModule\Models\Config as ConfigModel;
+use Context;
+use BaseObject;
+
+/**
+ * MyModule admin controller.
+ */
+class Admin extends Base
 {
     /**
-     * Initialize the model.
-     *
-     * @return void
+     * Initialize.
      */
     public function init()
     {
+        $this->setTemplatePath($this->module_path . 'views/admin/');
     }
 
     /**
-     * Get an item by item_srl.
-     *
-     * @param int $item_srl
-     * @return object|null
+     * Display admin config.
      */
-    public function getItem(int $item_srl): ?object
+    public function dispMyModuleAdminConfig()
     {
-        $args = new stdClass;
-        $args->item_srl = $item_srl;
-        $output = executeQuery('mymodule.getItem', $args);
-        return $output->data ?? null;
+        $config = ConfigModel::getConfig();
+        Context::set('config', $config);
+        $this->setTemplateFile('config');
+    }
+
+    /**
+     * Save admin config.
+     */
+    public function procMyModuleAdminInsertConfig()
+    {
+        $config = ConfigModel::getConfig();
+        $vars = Context::getRequestVars();
+
+        if (in_array($vars->example_config, ['Y', 'N']))
+        {
+            $config->example_config = $vars->example_config;
+        }
+        else
+        {
+            return new BaseObject(-1, 'invalid_config_value');
+        }
+
+        $output = ConfigModel::setConfig($config);
+        if (!$output->toBool())
+        {
+            return $output;
+        }
+
+        $this->setMessage('success_registed');
+        $this->setRedirectUrl(Context::get('success_return_url'));
     }
 }
 ```
 
-### Admin View ({module_name}.admin.view.php)
+### Event Handlers (controllers/EventHandlers.php)
 
 ```php
 <?php
 
-class MyModuleAdminView extends MyModule
+namespace Rhymix\Modules\MyModule\Controllers;
+
+/**
+ * MyModule event handlers (triggers).
+ */
+class EventHandlers extends Base
 {
     /**
-     * Initialize the admin view.
+     * After document insert trigger.
      *
-     * @return void
+     * @param object $obj
      */
-    public function init()
+    public function afterInsertDocument($obj)
     {
-        $this->setTemplatePath(sprintf('%stpl/', $this->module_path));
+
     }
 
     /**
-     * Display admin list.
+     * After document update trigger.
      *
-     * @return BaseObject|void
+     * @param object $obj
      */
-    public function dispMyModuleAdminList()
+    public function afterUpdateDocument($obj)
     {
-        $output = executeQueryArray('mymodule.getItemList', new stdClass);
-        \Context::set('item_list', $output->data);
-        $this->setTemplateFile('admin_list');
+
+    }
+
+    /**
+     * After document delete trigger.
+     *
+     * @param object $obj
+     */
+    public function afterDeleteDocument($obj)
+    {
+
     }
 }
 ```
 
-### Mobile Class ({module_name}.mobile.php)
+### Config Model (models/Config.php)
 
 ```php
 <?php
 
-class MyModuleMobile extends MyModuleView
+namespace Rhymix\Modules\MyModule\Models;
+
+use ModuleController;
+use ModuleModel;
+
+/**
+ * MyModule configuration model.
+ */
+class Config
 {
-    // Extends View class; override methods for mobile-specific behavior.
+    /**
+     * Cache for module config.
+     */
+    protected static $_cache = null;
+
+    /**
+     * Get module config.
+     *
+     * @return object
+     */
+    public static function getConfig()
+    {
+        if (self::$_cache === null)
+        {
+            self::$_cache = ModuleModel::getModuleConfig('mymodule') ?: new \stdClass;
+        }
+        return self::$_cache;
+    }
+
+    /**
+     * Save module config.
+     *
+     * @param object $config
+     * @return object
+     */
+    public static function setConfig($config)
+    {
+        $oModuleController = ModuleController::getInstance();
+        $result = $oModuleController->insertModuleConfig('mymodule', $config);
+        if ($result->toBool())
+        {
+            self::$_cache = $config;
+        }
+        return $result;
+    }
 }
 ```
+
+## Template File Conventions
+
+| Location | Extension | Syntax |
+|----------|-----------|--------|
+| `views/admin/` | `.blade.php` | Template v2 (Blade-style) |
+| `skins/*/` | `.html` or `.blade.php` | v1 or v2 (v2 preferred for new modules) |
+| `m.skins/*/` | `.html` or `.blade.php` | v1 or v2 (v2 preferred for new modules) |
+
+Admin views MUST use `.blade.php` (v2). For skins, `.html` with `<config autoescape="on" />` is still common, but `.blade.php` (v2) is preferred for new development.
 
 ## ModuleObject Properties and Methods
 

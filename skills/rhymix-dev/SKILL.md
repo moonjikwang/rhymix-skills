@@ -15,17 +15,45 @@ You are a Rhymix CMS extension development expert. When generating or validating
 - [Addon/Layout/Widget](reference-addon-layout-widget.md) — structure and patterns for each type
 - [API & Coding Standards](reference-api-conventions.md) — coding standards, API functions, language files
 
+## Critical: Modern Module Structure
+
+ALWAYS use the modern namespace-based module structure, NOT the legacy XE-style flat file structure.
+
+**Modern (CORRECT):**
+- `controllers/Base.php` (extends `\ModuleObject`), `controllers/Install.php`, `controllers/{Feature}.php`
+- `models/Config.php`, `models/{Model}.php`
+- `views/admin/*.blade.php`
+- `composer.json` with `rhymix/composer-stub`
+- Namespace: `Rhymix\Modules\{ModuleName}\Controllers`, `Rhymix\Modules\{ModuleName}\Models`
+- module.xml: `class="Controllers\ClassName"` attribute
+
+**Legacy XE-style (DO NOT generate for new modules):**
+- `{name}.class.php`, `{name}.controller.php`, `{name}.view.php`, `{name}.model.php`
+- module.xml: `type="view"`, `type="controller"` attributes
+
+## Critical: Template v2 for New Code
+
+When generating NEW templates, ALWAYS use Template v2 syntax:
+- Admin views: `.blade.php` extension (mandatory)
+- Skins/layouts: `.blade.php` preferred, `.html` with `@version(2)` also acceptable
+- Use `{{ $var }}` (auto-escaped), `{!! $var !!}` (unescaped), `@if`, `@foreach`, `@load`, `@include`, etc.
+- Use `@class`, `@selected`, `@checked`, `@disabled` attribute helpers
+- Use `@url()` for URL generation, `@lang()` for translations
+- Do NOT use v1 comment-style syntax (`<!--@if-->`) in new code
+
+When REVIEWING or MODIFYING existing v1 templates (.html with v1 syntax), maintain consistency with the existing syntax unless the user requests migration to v2.
+
 ## Core Rules
 
 ### Code Generation
 
-1. **Directory structure**: Follow the exact directory structure and file naming conventions for each extension type.
+1. **Module structure**: Use namespace-based structure with `controllers/`, `models/`, `views/` directories and `composer.json`.
 2. **Naming conventions**:
    - View actions: `disp{ModuleName}{Action}`
    - Controller actions: `proc{ModuleName}{Action}`
-   - Model methods: `get{ModuleName}{Data}`
    - Module names: lowercase snake_case
    - Class names: PascalCase
+   - Related disp/proc actions can be grouped in the same controller class file
 3. **Coding style**:
    - Indentation: tabs (not spaces)
    - Braces: opening brace on the next line (classes, functions, control structures)
@@ -36,29 +64,32 @@ You are a Rhymix CMS extension development expert. When generating or validating
    - Private/protected members: underscore prefix
    - PHPDoc `/** */` on all classes and functions
 4. **XML config files**: info.xml, module.xml, schema, and query files must follow the exact format in references.
-5. **Templates**: Use v1 (.html) or v2 (.blade.php) syntax correctly. Do not mix syntaxes (v1-compatible syntax in v2 is allowed).
+5. **module.xml**: Use `class="Controllers\ClassName"` for actions, `class="Controllers\EventHandlers"` for event handlers. Use `menu-name` and `admin-index` (hyphenated), not `menu_name` and `admin_index`.
 
 ### Code Validation
 
-1. **Structure**: Verify required files exist and directory structure matches.
+1. **Structure**: Verify namespace-based directory structure, `composer.json` present, required files exist.
 2. **module.xml**:
-   - Action names match actual PHP method names
-   - Type matches method prefix (view→disp, controller→proc)
+   - Actions use `class` attribute pointing to correct controller class
+   - Action names match actual PHP method names in the referenced class
+   - Method prefix matches action type (disp for views, proc for controllers)
    - Permissions reference valid grant names or defaults (guest/member/manager/root)
    - eventHandler class/method actually exist
+   - Uses modern hyphenated attributes (`admin-index`, `menu-name`)
 3. **Query XML**:
    - Action is valid (select/insert/update/delete)
    - Operation is valid
    - Required conditions have variables provided
    - Table names match schema definitions
 4. **PHP code**:
+   - Proper namespace declarations
    - Coding standards compliance
    - Correct usage of Context, executeQuery, and other APIs
    - Permission checks not missing
    - CSRF protection verified
 5. **Templates**:
-   - Correct version syntax used
-   - Proper variable escaping (watch for XSS with `|noescape`)
+   - New templates use v2 syntax
+   - Proper variable escaping (watch for XSS with `{!! !!}` or `|noescape`)
    - Valid include paths
 
 ### Extension Type Selection
